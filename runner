@@ -1,0 +1,452 @@
+def closest(lst, K): 
+    #looks at a list and finds the closest item to "K". 
+    #using this as a helper function later
+    
+     import numpy as np       
+     lst = np.asarray(lst) 
+     idx = (np.abs(lst - K)).argmin() 
+     return lst[idx] 
+ 
+closest([1,5,77,63,49],100)
+
+
+
+def swapPositions(list, pos1, pos2): 
+    
+    #swaps positions of items in lists. Using as helepr function
+      
+    list[pos1], list[pos2] = list[pos2], list[pos1] 
+    return list
+  
+    
+    
+    
+    
+def is_date(value):
+    import datetime
+    try:
+        d = datetime.datetime.strptime(value, "%b %d")
+        return True
+    except ValueError:
+        return False
+    
+    
+def get_date(row):
+    #used for the odds df formation
+    date = next(filter(is_date, df.loc[:row.name].Game.iloc[::-1]))
+    return date
+
+
+def get_spread_from_row(row):
+    #used for the odds df formation
+    _, _, _, team1, team2, _ = row.Game.split()
+    if pd.isnull(row.Open):
+        return ((team1, np.nan), (team2, np.nan))
+    team1spread = row.Open.split()[0]
+    team2spread = row.Open.split()[1]
+    return sorted(((team1, team1spread), (team2, team2spread)), reverse=True, key=lambda x: x[1])
+
+
+
+def fix_acronym(team):
+    #acronym fixer for the odds dataframe
+    if 'NO'==team:
+        team="NOP"
+    
+    if 'NY'==team:
+        team="NYK"
+        
+    if 'SA'==team:
+        team="SAS"
+        
+    if 'BK'==team:
+        team="BKN"
+    
+    if 'GS'== team:
+        team="GSW"
+        
+        
+    return team
+
+
+
+def getwinpct():
+
+        
+    import pandas as pd
+
+    #if len(str)==3:
+        #str=list(team_dict.keys())[list(team_dict.values()).index(str)]
+
+    #scrape betting website
+    url = "https://basketball.realgm.com/nba/standings/league/2021"
+
+        # Get a list of tables on the page
+    standings_list = pd.read_html(url)
+
+
+
+    standings = standings_list[len(standings_list)-1]
+    standings=standings.replace(to_replace='Philadelphia Sixers',value='Philadelphia 76ers')
+    
+
+    winpctlist=[]
+    winteamlist=[]
+    for i in range(30):
+        winteamlist.append(standings.iloc[i,1])
+    winpctlist.append(winteamlist)
+    winteamlist=[]
+    for i in range(30):
+        winteamlist.append(round(standings.iloc[i,4],3))
+    winpctlist.append(winteamlist)
+        
+    #for i in range(len(winpctlist)):
+        #if str in winpctlist[i][0]:
+            #return winpctlist[i][1]
+    return winpctlist
+
+
+
+
+def realteamstats(team):
+    
+    #it gets the points for and points against each team, then multiplies
+    #by a weighted constant based on the opposing team's win record. 
+    
+    import pandas as pd
+    # Get a list of tables on the page
+    # URL page we will scraping (see image above)
+
+
+    url = "https://www.basketball-reference.com/teams/{}/2021_games.html".format(team)
+
+    
+    #for some reason, BR represents charlotte as "CHO", so this was a slight adjustment
+    if team=="CHA":
+        url = "https://www.basketball-reference.com/teams/CHO/2021_games.html"    
+    
+    game_list= pd.read_html(url)
+
+
+
+
+    #find the first DF object, and filter out the results that are null. 
+    #this could happen if a game has not been played yet.
+    oldgames = game_list[0]
+    oldgames=oldgames[oldgames.iloc[:,4].notnull()]
+    wins=getwinpct()
+    #wins[1][wins[0].index(oldgames.iloc[i,6])]
+    
+    #this is a 
+    adjpoints=[]
+    for i in range(len(oldgames)):
+        adjpoints.append((int(oldgames.iloc[i,9])*(wins[1][wins[0].index(oldgames.iloc[i,6])])**(1./20.)))
+                                                   
+      
+
+    adjopppoints=[]
+    for i in range(len(oldgames)):
+        adjopppoints.append((int(oldgames.iloc[i,10])*1/(wins[1][wins[0].index(oldgames.iloc[i,6])])**((1./20.))))
+    adjopppoints  
+
+
+    oldgames.insert(10,"Adjusted Points",adjpoints,True)
+    oldgames.insert(11,"Adjusted Opp Points",adjopppoints,True)
+
+    return [oldgames["Adjusted Points"].mean(),oldgames["Adjusted Opp Points"].mean(),oldgames["Adjusted Points"].std(),oldgames["Adjusted Opp Points"].std()]
+   
+
+    
+    
+team_dict={'Atlanta Hawks': 'ATL',
+ 'Boston Celtics': 'BOS',
+ 'Brooklyn Nets': 'BRK',
+ 'Charlotte Hornets': 'CHO',
+ 'Chicago Bulls': 'CHI',
+ 'Cleveland Cavaliers': 'CLE',
+ 'Dallas Mavericks': 'DAL',
+ 'Denver Nuggets': 'DEN',
+ 'Detroit Pistons': 'DET',
+ 'Golden State Warriors': 'GSW',
+ 'Houston Rockets': 'HOU',
+ 'Indiana Pacers': 'IND',
+ 'Los Angeles Clippers': 'LAC',
+ 'Los Angeles Lakers': 'LAL',
+ 'Memphis Grizzlies': 'MEM',
+ 'Miami Heat': 'MIA',
+ 'Milwaukee Bucks': 'MIL',
+ 'Minnesota Timberwolves': 'MIN',
+ 'New Orleans Pelicans': 'NOP',
+ 'New York Knicks': 'NYK',
+ 'Oklahoma City Thunder': 'OKC',
+ 'Orlando Magic': 'ORL',
+ 'Philadelphia 76ers': 'PHI',
+ 'Phoenix Suns': 'PHO',
+ 'Portland Trail Blazers': 'POR',
+ 'Sacramento Kings': 'SAC',
+ 'San Antonio Spurs': 'SAS',
+ 'Toronto Raptors': 'TOR',
+ 'Utah Jazz': 'UTA',
+ 'Washington Wizards': 'WAS'}
+
+
+
+def getlists():
+    
+    #gets the list of the teams that are playing today
+    import pandas as pd
+    import datetime
+    
+    #Make sure that the url is not static
+    import datetime
+    currtime=datetime.datetime.today()
+
+    url = "https://www.basketball-reference.com/leagues/NBA_2021_games-{}.html".format((currtime.strftime('%B').lower()))
+
+
+    # Get a list of tables on the page
+    df_list = pd.read_html(url)
+
+
+    # Print info.
+    #print(f"Number of tables found: {len(df_list)}") # Out: Number of tables found: 1
+
+
+    # Select first dataframe object and go to town.
+    df = df_list[0]
+
+
+    #print(f"Found {df.shape[0]} rows and {df.shape[1]} columns.") # Found 238 rows and 10 columns.
+
+    # You can also drop some of those fields, like the ones for Box Score and Notes, which don't contain too much relevant info:
+
+    df.drop(["Unnamed: 6", "Unnamed: 7", "Notes"], axis=1, inplace=True)
+
+
+#pull requests for today
+
+    df=df[df["Date"]==str(str(currtime.strftime("%A")[:3])+ ", "+currtime.strftime("%b")+ " "+str(currtime.day)+", 2021")]
+
+    df=df[["Visitor/Neutral","Home/Neutral"]]
+
+    index=df.index
+    num_rows=len(index)
+
+
+    playinglists=[]
+    for i in range(num_rows):
+        appender = [df.iloc[i]['Visitor/Neutral'],df.iloc[i]['Home/Neutral']]
+        playinglists.append(appender)
+    return playinglists
+
+getlists()
+
+
+
+
+
+
+
+
+
+#import libraries
+import datetime
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+import pandas as pd
+import numpy as np
+import scipy
+import scipy.stats as st
+
+
+
+url = "https://www.covers.com/sport/basketball/nba/odds"
+
+
+        # Get a list of tables on the page
+df_list = pd.read_html(url)
+
+
+        # Print info.
+    #print(f"Number of tables found: {len(bf_list)}") # Out: Number of tables found: 1
+
+
+        # Select first dataframe object and go to town.
+df = df_list[2]
+df
+
+
+df = df[["Game", "Open"]]
+
+
+
+
+df['date'] = df.apply(get_date, axis=1)
+df['is_date'] = df.Game.apply(is_date)
+df = df[~df.is_date]
+df = df[['Game', "Open", "date"]]
+
+
+tomorrow = datetime.datetime.today() + datetime.timedelta(days=1)
+today=datetime.datetime.today()
+df = df[
+    df.date.eq(today.strftime("%b %d").replace(' 0',' '))
+].copy()
+
+
+df['game_type'] = df.Game.apply(lambda x: x.split()[-1])
+df = df[
+    df.game_type.eq("Matchup")
+]
+
+
+df['teamspread'] = df.apply(get_spread_from_row, axis=1)
+df['team1spread'] = df.teamspread.apply(lambda x: x[0][1])
+df['team2spread'] = df.teamspread.apply(lambda x: x[1][1])
+df['team1'] = df.teamspread.apply(lambda x: x[0][0])
+df['team2'] = df.teamspread.apply(lambda x: x[1][0])
+df['time'] = df.Game.apply(lambda x: " ".join(x.split()[:2]))
+
+
+df = df[['team1spread', 'team2spread', "team1", "team2", "time", "date"]].copy()
+df['team1']=df.team1.apply(fix_acronym)
+df['team2']=df.team2.apply(fix_acronym)
+
+odds_list=df.values.tolist()
+odds_list
+
+
+df2_list = pd.read_html(url)
+
+df2 = df2_list[4]
+df2
+
+
+df2 = df2[["Game", "Open"]]
+
+df2 = df2.iloc[1:len(odds_list)+1]
+
+overunderlist=[]
+for i in range(len(df2)):
+    overunderlist.append(df2.iloc[i,1][2:7])  
+
+
+finaloutputlist=[]
+for i in range(len(odds_list)):
+
+    team1=odds_list[i][2]
+    team2=odds_list[i][3]
+    currday = datetime.datetime.today()
+
+    (currday.strftime("%b %d %Y"))
+
+    spreadlist=[0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.6,7,7.5,8,8.5,9,9.5,
+               10,10.5,11,11.5,12,12.5,13,13.5]
+    percentlist=[50,50.5,51.1,52.3,54.3,56.3,58.2,60.1,61.9,63.6,65.8,68,70.1,72.1,74.2,76.3,
+                78.4,80.5,82.8,85.2,87.3,89.4,91.3,93.2,95,96.8,98.7,100]
+
+    #create means and deviations for each team 
+    team1=team1.upper()
+    team2=team2.upper()
+    if team1=='BKN':
+        team1="BRK"
+    if team2=='BKN':
+        team2="BRK"
+    t1score=np.sqrt(realteamstats(team1)[0]*realteamstats(team2)[1])
+    t2score=np.sqrt(realteamstats(team2)[0]*realteamstats(team1)[1])
+    t1dev=np.sqrt(realteamstats(team1)[2]*realteamstats(team2)[3])
+    t2dev=np.sqrt(realteamstats(team1)[3]*realteamstats(team2)[2])
+
+
+    #t1score=np.sqrt(teamstats(team1)[0]*teamstats(team2)[1])
+    #t2score=np.sqrt(teamstats(team2)[0]*teamstats(team1)[1])
+    #t1dev=np.sqrt(teamstats(team1)[2]*teamstats(team2)[3])
+    #t2dev=np.sqrt(teamstats(team1)[3]*teamstats(team2)[2])
+
+    #Monte Carlo Simulation 10,000 times 
+    t1sim=np.random.normal(t1score,t1dev,10000).round(3)
+    t2sim=np.random.normal(t2score,t2dev,10000).round(3)
+
+    #simulate by subtracting lists of deviations
+    sim=np.subtract(t1sim,t2sim)
+
+
+    #solve for winning percentages...count 
+    count=0
+    for item in sim:
+        if item>0:
+            count+=1 #represents the number of times team 1's score is greater than team 2's
+    pct1=count/sim.size
+    pct2=1-pct1
+
+    #solve for Monte Carlo spreads 
+    totteam1=0
+    totteam2=0
+    for item in sim:
+        if item>0:
+            totteam1+=item
+        else:
+            totteam2+=item
+
+    avgwint1=totteam1/count
+    avgwint2=totteam2/(1-count)
+
+    #projected winner variable, win percentage, MC spread
+    if team1=='BRK':
+        team1='BKN'
+    if team2=='BRK':
+        team2='BKN'
+    projwin=''
+    winpct=0
+    MCspread=0
+    if pct1>0.5:
+        projwin=team1
+        winpct=pct1
+        MCspread=avgwint1
+        
+    else: 
+        projwin=team2
+        winpct=pct2
+        MCspread=avgwint2
+        
+
+    #bookspread
+    bkspread=spreadlist[percentlist.index(closest(percentlist,winpct*100))]
+
+    spread=0.72*bkspread+ 0.28*MCspread   
+
+    vartotalmean= t1score+t2score
+    vartotalstd= ((t1dev)**2+(t2dev)**2)**0.5
+    overunder=float(overunderlist[i])
+    overpct=st.norm.cdf((vartotalmean-overunder)/vartotalstd).round(4)*100
+
+    teamsplaying=[team1,team2]
+    for team in teamsplaying:
+        if odds_list[i][2] not in team:
+            underdog=team
+    
+    
+
+    cover=''
+    if spread > abs(float(odds_list[i][0])) and projwin == odds_list[i][2]:
+        cover=projwin
+    else:
+        cover = underdog
+
+
+
+    #create exported dataframe
+    finaloutputlist.append([currday.strftime("%b %d %Y"),str(team1+"/"+team2),projwin,winpct*100,spread.round(2),odds_list[i][0],odds_list[i][2],cover,overunderlist[i],overpct])
+    
+    underdog=''
+
+finaldf=pd.DataFrame(data=finaloutputlist,columns=["Date","Teams","Model Projected Winner","Win Percentage","Spread","Book Spread","Book Favorite","Cover","Over/Under","Over % Chance"])
+
+
+
+finaldf.to_clipboard()
+
+finaldf
+
+
+
